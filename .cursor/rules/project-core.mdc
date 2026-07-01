@@ -1,0 +1,15 @@
+---
+description: Reglas core del proyecto Texo
+alwaysApply: true
+---
+
+# Texo — Core
+
+- Responder y documentar en **español**; código (nombres, variables, commits) en **inglés**.
+- Máximo **500 líneas** por archivo; extraer subcomponentes y hooks al acercarse al límite.
+- UI **mobile-first** y responsiva en toda la aplicación.
+- Cambios **mínimos** al scope pedido; no refactorizar fuera de lo solicitado.
+- Comentarios breves solo en lógica no obvia; un componente principal por archivo.
+- No commitear ni hardcodear secretos (`.env`, keys, service role).
+- Antes de cambios de **arquitectura** o **base de datos**: leer `AGENTS.md` y el doc relevante en `docs/INDEX.md`.
+- `AGENTS.md` es la fuente compacta de contexto del proyecto.

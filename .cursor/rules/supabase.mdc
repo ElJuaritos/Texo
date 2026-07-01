@@ -1,0 +1,20 @@
+---
+description: Convenciones Supabase para Texo
+globs: supabase/**/*
+alwaysApply: false
+---
+
+# Supabase
+
+- Cambios de schema **solo** vía migraciones en `supabase/migrations/`.
+- **RLS obligatorio** en tablas expuestas al cliente; nunca confiar solo en el frontend.
+- Regenerar tipos TS tras cada migración relevante.
+- **Service role** solo en Edge Functions o entorno server-side; nunca en el cliente.
+- Consultar `docs/database.md` antes de crear tablas o políticas nuevas.
+
+## Flujo de migración
+
+1. `supabase migration new <descripcion>`
+2. Escribir SQL + políticas RLS
+3. Aplicar local/remoto (`supabase db push`)
+4. Regenerar types → `packages/shared/src/types/database.ts`

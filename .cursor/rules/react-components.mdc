@@ -1,0 +1,22 @@
+---
+description: Patrones React/TSX para Texo
+globs: **/*.tsx
+alwaysApply: false
+---
+
+# Componentes React
+
+- Solo componentes funcionales con hooks; un componente principal por archivo.
+- Lógica de datos y side effects → custom hooks; JSX solo presentación.
+- Props tipadas con `interface` o `type`; evitar `any`.
+- **JSDoc breve en español** en componentes exportados (qué hace, no cómo).
+- Accesibilidad: `label` en inputs, roles semánticos, focus visible en interactivos.
+- Estilos con **Tailwind CSS** de forma consistente; mobile-first (`sm:`, `md:`, `lg:`).
+- Subcomponentes en subcarpeta cuando el archivo crece (ej. `VehicleCard/`).
+
+```tsx
+/** Tarjeta resumen de un vehículo en el listado del marketplace. */
+export function VehicleCard({ vehicle }: VehicleCardProps) {
+  return ( ... );
+}
+```
