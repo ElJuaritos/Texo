@@ -92,3 +92,17 @@ export async function listSellerVehicles(
   assertNoError(error);
   return (data ?? []).map(mapVehicle);
 }
+
+/** Vehículos en cola de inspección (admin). */
+export async function listVehiclesPendingInspection(
+  client: TexoSupabaseClient,
+): Promise<Vehicle[]> {
+  const { data, error } = await client
+    .from("vehicles")
+    .select("*")
+    .eq("status", "pending_inspection")
+    .order("updated_at", { ascending: true });
+
+  assertNoError(error);
+  return (data ?? []).map(mapVehicle);
+}

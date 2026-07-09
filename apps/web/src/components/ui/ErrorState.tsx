@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/Button";
+
 interface ErrorStateProps {
   message: string;
   onRetry?: () => void;
@@ -6,16 +8,12 @@ interface ErrorStateProps {
 /** Estado de error con reintento opcional. */
 export function ErrorState({ message, onRetry }: ErrorStateProps) {
   return (
-    <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-8 text-center">
-      <p className="text-sm font-medium text-red-800">{message}</p>
+    <div className="rounded-2xl border border-texo-error/30 bg-texo-error/10 px-6 py-8 text-center">
+      <p className="text-sm font-medium text-texo-error">{message}</p>
       {onRetry && (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="mt-4 text-sm font-medium text-teal-700 hover:text-teal-600"
-        >
+        <Button variant="secondary" onClick={onRetry} className="mt-4 px-6 py-2">
           Reintentar
-        </button>
+        </Button>
       )}
     </div>
   );

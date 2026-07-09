@@ -163,15 +163,24 @@ Implementación: **Agente Supabase**. Firmas congeladas v1:
 | `scheduleTestDrive(client, payload)` | `ScheduleTestDrivePayload` | `{ id }` | post-oferta aceptada |
 | `listSellerVehicles(client, sellerId)` | seller uuid | `Vehicle[]` | panel vendedor |
 | `listBuyerOffers(client, buyerId)` | buyer uuid | `Offer[]` | mis ofertas |
+| `listPendingOffers(client)` | — | `Offer[]` | admin cola |
+| `acceptOffer(client, offerId)` | offer id | void | admin |
+| `rejectOffer(client, offerId)` | offer id | void | admin |
+| `listVehiclesPendingInspection(client)` | — | `Vehicle[]` | admin inspección |
+| `createInspection(client, payload)` | `CreateInspectionPayload` | `{ id }` | admin |
+| `publishVehicle(client, vehicleId, price)` | uuid, number | void | admin |
 | `listAdminTransactions(client)` | — | `Transaction[]` | `/admin` |
+| `createTransaction(client, offerId)` | offer id | `{ id }` | admin escrow simulado |
+| `updateTransactionStatus(client, id, status)` | uuid, status | void | admin |
 
 ---
 
-## RLS (resumen v1)
+## RLS (resumen v2)
 
-- **Buyer:** SELECT vehicles WHERE status = `published`; CRUD own offers y citas.
-- **Seller:** CRUD own vehicles, documents; SELECT offers on own vehicles.
-- **Admin:** ALL on all tables (via `profiles.role = admin`).
+- **Buyer:** SELECT vehicles WHERE status = `published`; INSERT offers on published only; cannot change offer status.
+- **Seller:** CRUD own vehicles (status limited); documents; cannot publish or write inspections.
+- **Admin:** ALL; only admin changes offer status, publishes vehicles, writes inspections, creates transactions.
+- **Storage:** path `{vehicle_id}/...` — seller + admin on private buckets.
 
 ---
 

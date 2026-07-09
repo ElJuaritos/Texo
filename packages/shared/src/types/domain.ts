@@ -29,6 +29,7 @@ export interface Vehicle {
   mileage: number;
   estimated_price: number | null;
   listing_price: number | null;
+  cover_image_url: string | null;
   status: VehicleStatus;
   published_at: string | null;
   created_at: string;
@@ -130,6 +131,24 @@ export interface ScheduleTestDrivePayload {
   offer_id: string;
   scheduled_at: string;
   location: string;
+}
+
+/** Ítem de inspección al registrar reporte (admin). */
+export interface CreateInspectionItemPayload {
+  category: InspectionCategory;
+  component: string;
+  severity: InspectionSeverity;
+  description: string;
+  photo_path?: string;
+}
+
+/** Payload para crear inspección certificada (admin). */
+export interface CreateInspectionPayload {
+  vehicle_id: string;
+  inspector_name: string;
+  score: number;
+  notes?: string;
+  items?: CreateInspectionItemPayload[];
 }
 
 export type { Database } from "./database";

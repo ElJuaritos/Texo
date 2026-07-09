@@ -32,6 +32,7 @@ export function mapVehicle(row: VehicleRow): Vehicle {
     mileage: row.mileage,
     estimated_price: toNumber(row.estimated_price),
     listing_price: toNumber(row.listing_price),
+    cover_image_url: row.cover_image_url ?? null,
     status: row.status,
     published_at: row.published_at,
     created_at: row.created_at,

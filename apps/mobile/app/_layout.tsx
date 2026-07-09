@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
   AuthProvider,
   getHomeRouteForRole,
@@ -12,9 +13,11 @@ import { colors, fontSize, spacing } from "../lib/theme/tokens";
 
 /** Rutas accesibles sin sesión — paridad con browse público web. */
 function isPublicRoute(segments: string[]): boolean {
+  if (segments.length === 0) return true;
+  if (segments[0] === "index") return true;
   if (segments[0] === "vehicle") return true;
-  if (segments[0] === "(tabs)" && (!segments[1] || segments[1] === "index")) {
-    return true;
+  if (segments[0] === "(tabs)") {
+    return !segments[1] || segments[1] === "index";
   }
   return false;
 }
@@ -26,7 +29,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || !client) return;
 
     const inAuth = segments[0] === "(auth)";
     const isPublic = isPublicRoute(segments);
@@ -39,7 +42,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     if (session && inAuth && profile) {
       router.replace(getHomeRouteForRole(profile.role));
     }
-  }, [session, profile, isLoading, segments, router]);
+  }, [session, profile, isLoading, segments, router, client]);
 
   if (!client) {
     return (
@@ -53,31 +56,71 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (isLoading) return <LoadingState message="Iniciando sesión…" />;
-
-  return <>{children}</>;
+  return (
+    <View style={styles.root}>
+      {children}
+      {isLoading ? (
+        <View style={styles.loadingOverlay}>
+          <LoadingState message="Iniciando sesión…" />
+        </View>
+      ) : null}
+    </View>
+  );
 }
 
 /** Layout raíz con auth y navegación stack. */
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <AuthGate>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="vehicle/[id]" options={{ headerShown: true, title: "Detalle" }} />
-          <Stack.Screen name="sell/documents" options={{ headerShown: true, title: "Documentos" }} />
-          <Stack.Screen name="admin" />
-        </Stack>
-        <StatusBar style="dark" />
-      </AuthGate>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <AuthGate>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.background },
+            }}
+          >
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen
+              name="vehicle/[id]"
+              options={{
+                headerShown: true,
+                title: "Detalle",
+                headerStyle: { backgroundColor: colors.background },
+                headerTintColor: colors.textPrimary,
+                headerShadowVisible: false,
+              }}
+            />
+            <Stack.Screen
+              name="sell/documents"
+              options={{
+                headerShown: true,
+                title: "Documentos",
+                headerStyle: { backgroundColor: colors.background },
+                headerTintColor: colors.textPrimary,
+                headerShadowVisible: false,
+              }}
+            />
+            <Stack.Screen name="admin" />
+          </Stack>
+          <StatusBar style="light" />
+        </AuthGate>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    backgroundColor: colors.background,
+    flex: 1,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.background,
+  },
   configError: {
     alignItems: "center",
     backgroundColor: colors.background,

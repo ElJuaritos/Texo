@@ -125,7 +125,16 @@ erDiagram
 | `transaction-documents` | No | INE, facturas |
 | `inspection-reports` | No | PDF reporte mecánico |
 
-Policies Storage: pendiente migración dedicada (Semana 2 demo).
+Policies Storage: ver migración `20250705120000_security_and_business_rules.sql` (path `{vehicle_id}/...`, seller + admin).
+
+| Policy | Bucket | Regla |
+|--------|--------|-------|
+| `vehicle_photos_public_read` | vehicle-photos | SELECT público |
+| `vehicle_photos_seller_*` | vehicle-photos | INSERT/UPDATE/DELETE seller o admin |
+| `transaction_docs_*` | transaction-documents | SELECT/INSERT/UPDATE/DELETE seller o admin |
+| `inspection_reports_*` | inspection-reports | seller lectura/insert; admin ALL |
+
+Triggers de negocio (misma migración): rol inmutable, solo admin publica/acepta ofertas, inspección solo admin.
 
 ---
 

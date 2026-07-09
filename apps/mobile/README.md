@@ -13,7 +13,7 @@ Escanea el QR con Expo Go (iOS/Android).
 
 ## Stack
 
-- Expo SDK 53 · Expo Router 5
+- Expo SDK 54 · Expo Router 6
 - Supabase vía `@texo/shared` + SecureStore
 - **StyleSheet** con tokens en `lib/theme/tokens.ts` (paridad design-tokens v1)
 

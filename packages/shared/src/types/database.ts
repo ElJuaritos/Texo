@@ -327,6 +327,7 @@ export type Database = {
       };
       vehicles: {
         Row: {
+          cover_image_url: string | null;
           created_at: string;
           estimated_price: number | null;
           id: string;
@@ -342,6 +343,7 @@ export type Database = {
           year: number;
         };
         Insert: {
+          cover_image_url?: string | null;
           created_at?: string;
           estimated_price?: number | null;
           id?: string;
@@ -357,6 +359,7 @@ export type Database = {
           year: number;
         };
         Update: {
+          cover_image_url?: string | null;
           created_at?: string;
           estimated_price?: number | null;
           id?: string;

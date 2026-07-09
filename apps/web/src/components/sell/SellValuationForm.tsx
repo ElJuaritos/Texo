@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { getTexoBrowserClient } from "@/lib/supabase/texo-client";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { SellStepper } from "@/components/sell/SellStepper";
 
-/** Formulario de valuación y captura de vehículo (draft). */
+/** Formulario paso 1 — datos del vehículo. */
 export function SellValuationForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -21,11 +23,17 @@ export function SellValuationForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.make.trim() || !form.model.trim() || !form.mileage) {
+      setError("Completa marca, modelo y kilómetros");
+      return;
+    }
     setLoading(true);
     setError(null);
 
     const supabase = getTexoBrowserClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       setError("Debes iniciar sesión como vendedor");
       setLoading(false);
@@ -58,91 +66,65 @@ export function SellValuationForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-lg space-y-4 rounded-xl border border-slate-200 bg-white p-6">
+    <div className="mx-auto max-w-lg space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Vender mi auto</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Valuación estimada de referencia:{" "}
-          <strong>${form.estimated_price.toLocaleString("es-MX")} MXN</strong> (ajuste admin después).
-        </p>
+        <h1 className="text-xl font-bold text-texo-text-primary">Publicar mi auto</h1>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm sm:col-span-2">
-          <span className="mb-1 block font-medium">Marca</span>
-          <input
-            required
-            value={form.make}
-            onChange={(e) => setForm({ ...form, make: e.target.value })}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2"
-            placeholder="BMW"
-          />
-        </label>
-        <label className="block text-sm sm:col-span-2">
-          <span className="mb-1 block font-medium">Modelo</span>
-          <input
-            required
-            value={form.model}
-            onChange={(e) => setForm({ ...form, model: e.target.value })}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2"
-            placeholder="X3"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Año</span>
-          <input
-            type="number"
-            required
-            value={form.year}
-            onChange={(e) => setForm({ ...form, year: Number(e.target.value) })}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Kilometraje</span>
-          <input
-            type="number"
-            required
-            value={form.mileage}
-            onChange={(e) => setForm({ ...form, mileage: Number(e.target.value) })}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2"
-          />
-        </label>
-        <label className="block text-sm sm:col-span-2">
-          <span className="mb-1 block font-medium">Versión (opcional)</span>
-          <input
-            value={form.trim}
-            onChange={(e) => setForm({ ...form, trim: e.target.value })}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2"
-          />
-        </label>
-        <label className="block text-sm sm:col-span-2">
-          <span className="mb-1 block font-medium">Precio estimado (MXN)</span>
-          <input
-            type="number"
-            value={form.estimated_price}
-            onChange={(e) =>
-              setForm({ ...form, estimated_price: Number(e.target.value) })
-            }
-            className="w-full rounded-lg border border-slate-200 px-3 py-2"
-          />
-        </label>
-      </div>
+      <SellStepper currentStep={1} />
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="Marca"
+          required
+          value={form.make}
+          onChange={(e) => setForm({ ...form, make: e.target.value })}
+          placeholder="ej. BMW, Toyota, Honda..."
+        />
+        <Input
+          label="Modelo"
+          required
+          value={form.model}
+          onChange={(e) => setForm({ ...form, model: e.target.value })}
+          placeholder="ej. Serie 3, Corolla..."
+        />
+        <Input
+          label="Año"
+          type="number"
+          required
+          value={form.year}
+          onChange={(e) => setForm({ ...form, year: Number(e.target.value) })}
+          placeholder="2020"
+        />
+        <Input
+          label="Kilómetros"
+          type="number"
+          required
+          value={form.mileage || ""}
+          onChange={(e) => setForm({ ...form, mileage: Number(e.target.value) })}
+          placeholder="42,000"
+        />
+        <Input
+          label="Precio (MXN)"
+          type="number"
+          value={form.estimated_price}
+          onChange={(e) =>
+            setForm({ ...form, estimated_price: Number(e.target.value) })
+          }
+          placeholder="450,000"
+        />
+        <Input
+          label="Versión (opcional)"
+          value={form.trim}
+          onChange={(e) => setForm({ ...form, trim: e.target.value })}
+        />
 
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-lg bg-teal-700 px-6 py-2.5 font-medium text-white hover:bg-teal-600 disabled:opacity-50"
-        >
-          {loading ? "Guardando…" : "Guardar borrador y continuar"}
-        </button>
-        <Link href="/" className="py-2.5 text-sm text-slate-500 hover:text-teal-700">
-          Cancelar
-        </Link>
-      </div>
-    </form>
+        {error && <p className="text-sm text-texo-error">{error}</p>}
+
+        <Button type="submit" fullWidth disabled={loading}>
+          {loading ? "Guardando…" : "Siguiente"}
+        </Button>
+      </form>
+    </div>
   );
 }

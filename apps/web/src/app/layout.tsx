@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
-import { Header } from "@/components/layout/Header";
+import { Inter } from "next/font/google";
+import { AppShell } from "@/components/layout/AppShell";
+import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   title: "Texo — Marketplace de autos seminuevos",
@@ -13,12 +20,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
-      <body>
-        <Header />
-        <main className="mx-auto min-h-[calc(100vh-4rem)] max-w-6xl px-4 py-8">
-          {children}
-        </main>
+    <html lang="es" className={inter.variable}>
+      <body className="font-sans">
+        <ToastProvider>
+          <AppShell>{children}</AppShell>
+        </ToastProvider>
       </body>
     </html>
   );

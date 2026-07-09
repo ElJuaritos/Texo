@@ -14,34 +14,34 @@ interface StatusBadgeProps {
   status: BadgeStatus;
 }
 
-/** Colores de pill según design-tokens v1 StatusBadge. */
+/** Colores dark semitransparentes — paridad web v2. */
 function getStatusColors(status: BadgeStatus) {
   switch (status) {
     case "published":
     case "accepted":
     case "confirmed":
-      return { bg: colors.successBg, text: colors.successText };
+      return { bg: colors.successBg, text: colors.success };
     case "pending":
     case "pending_documents":
     case "pending_inspection":
     case "initiated":
-      return { bg: colors.warningBg, text: colors.warningText };
+      return { bg: colors.warningBg, text: colors.warning };
     case "offer_accepted":
     case "countered":
     case "closing":
-      return { bg: colors.infoBg, text: colors.infoText };
+      return { bg: colors.infoBg, text: colors.primary };
     case "sold":
     case "closed":
     case "withdrawn":
-      return { bg: colors.slateBg, text: colors.slateText };
+      return { bg: "rgba(42,51,71,0.5)", text: colors.textSecondary };
     case "inspection_failed":
     case "rejected":
     case "expired":
     case "cancelled":
     case "no_show":
-      return { bg: colors.errorBg, text: colors.errorText };
+      return { bg: colors.errorBg, text: colors.error };
     default:
-      return { bg: colors.slateBg, text: colors.slateText };
+      return { bg: colors.surfaceElevated, text: colors.textMuted };
   }
 }
 
@@ -61,7 +61,7 @@ function getStatusLabel(status: BadgeStatus): string {
   return status;
 }
 
-/** Pill de estado de vehículo, oferta o transacción. */
+/** Pill de estado dark semitransparente. */
 export function StatusBadge({ status }: StatusBadgeProps) {
   const palette = getStatusColors(status);
 

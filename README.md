@@ -29,23 +29,49 @@ npm run dev:mobile                      # Expo dev server
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | web | Clave anon |
 | `EXPO_PUBLIC_SUPABASE_URL` | mobile | URL Supabase |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | mobile | Clave anon |
+| `EXPO_PUBLIC_WEB_BASE_URL` | mobile | URL base web para fotos (`http://localhost:3000` o `https://usuario.github.io/Texo`) |
 
-## Estructura
+## Deploy en GitHub Pages
+
+La web demo se publica en `https://<usuario>.github.io/Texo/`:
+
+1. **Settings → Secrets → Actions** — añadir `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+2. **Settings → Pages → Build and deployment** — Source: **GitHub Actions**
+3. Push a `main` — el workflow `.github/workflows/deploy-gh-pages.yml` construye y despliega `apps/web/out/`
+
+Build local (export estático):
+
+```bash
+# Windows PowerShell
+$env:STATIC_EXPORT="true"; node scripts/prepare-static-export.mjs; npm run build --workspace=@texo/web; node scripts/restore-static-export.mjs
+```
+
+Para mobile en producción, configura `EXPO_PUBLIC_WEB_BASE_URL=https://<usuario>.github.io/Texo`.
+
 
 ```
 apps/web/       → Next.js 15
 apps/mobile/    → Expo Router
 packages/shared → types, enums, queries
-supabase/       → DB (pendiente init)
+supabase/       → migraciones + seed
 docs/           → documentación + contratos
+scripts/        → seed-demo.mjs
 ```
+
+## Deploy demo (Vercel)
+
+1. Conectar repo en Vercel — **Root Directory:** `apps/web`
+2. Variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+3. Aplicar migraciones Supabase — ver [docs/auth-deploy.md](./docs/auth-deploy.md)
+4. Seed: `SUPABASE_SERVICE_ROLE_KEY=... npm run seed:demo`
 
 ## Documentación
 
 | Audiencia | Enlace |
 |-----------|--------|
 | Agentes IA | [AGENTS.md](./AGENTS.md) |
-| Multi-agente | [docs/AGENT_SYNC.md](./docs/AGENT_SYNC.md) |
+| Deploy + auth | [docs/auth-deploy.md](./docs/auth-deploy.md) |
+| Smoke test | [docs/integration-report.md](./docs/integration-report.md) |
 | Índice | [docs/INDEX.md](./docs/INDEX.md) |
 
 ## Licencia

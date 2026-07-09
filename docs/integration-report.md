@@ -1,136 +1,151 @@
-# Integration Report v1 — Texo Web + Mobile
+# Integration Report v2 — Texo Demo Deploy Readiness
 
-> Fecha: 2025-06-30 · Agente Integración  
-> Referencias: `docs/AGENT_SYNC.md`, `docs/contracts/api-surface.md`, `docs/demo-scope.md`
+> Fecha: 2025-07-05 · Post-implementación plan demo público  
+> Referencias: `docs/demo-scope.md`, `docs/auth-deploy.md`, `docs/database.md`
 
 ## Resumen ejecutivo
 
-| Área | Estado |
-|------|--------|
-| Contratos `@texo/shared` | ✅ Cumple |
-| Paridad funcional demo (In scope) | ✅ Con fixes aplicados |
-| Paridad visual (design-tokens v1) | ⚠️ Aceptable — diferencias de plataforma |
-| Auth + routing por rol | ✅ Alineado |
-| `database.md` vs migrations | ✅ Alineado |
-| Integración v1 | **Complete** (blockers menores documentados) |
+| Área | Estado v1 | Estado v2 |
+|------|-----------|-----------|
+| Paridad UI web/mobile | ✅ | ✅ |
+| Seguridad RLS (rol admin, offers, vehicles) | ❌ | ✅ Migración `20250705120000` |
+| Storage policies | ❌ | ✅ En migración (aplicar en remoto) |
+| Admin operativo (ofertas, inspección, tx) | ❌ read-only | ✅ Web `/admin` |
+| Flujo E2E sin Supabase Dashboard | ❌ | ✅ Con panel admin |
+| Deploy Vercel | ❌ | ✅ `apps/web/vercel.json` |
+| Seed demo | ❌ | ✅ `scripts/seed-demo.mjs` |
+| Credenciales débiles en docs | ❌ expuestas | ✅ Removidas — usar seed script |
 
----
-
-## Checklist de contratos
-
-| Item | Web | Mobile | Estado |
-|------|-----|--------|--------|
-| Types/enums solo desde `@texo/shared` | ✅ | ✅ | OK |
-| Enums duplicados en `apps/` | No | No | OK |
-| Queries compartidas para lectura/escritura DB | ✅ | ✅ | OK |
-| `database.md` = schema en `supabase/migrations/` | 8 tablas, enums, RLS | — | OK |
-
-### Lógica movida a `packages/shared` (fixes v1)
-
-| Utilidad / query | Archivo | Motivo |
-|------------------|---------|--------|
-| `formatPriceMxn`, `formatMileage`, `estimatePriceRange`, `resolveVehiclePrice` | `utils/format.ts` | Duplicación web/mobile |
-| `filterCatalogVehicles`, `getCatalogMakes` | `utils/catalog-filters.ts` | Filtros inventario duplicados |
-| `listPublishedVehiclesForCatalog` | `queries/vehicles.ts` | Join inspección solo en web |
-| `VehicleCatalogItem` | `types/domain.ts` | Tipo local `VehicleCardData` eliminado en web |
+**Criterio demo público:** listo tras aplicar migraciones en Supabase remoto + `npm run seed:demo` + configurar Vercel env vars. Ver checklist abajo.
 
 ---
 
 ## Paridad funcional (demo-scope In)
 
-| Feature | Web | Mobile | Paridad |
-|---------|-----|--------|---------|
-| Listado + filtros (marca, precio, año) | ✅ `/` | ✅ `(tabs)/index` | ✅ |
-| Favoritos (local, sin DB) | ✅ localStorage | ✅ SecureStore | ✅ |
-| Ficha + inspección | ✅ `/vehicles/[id]` | ✅ `vehicle/[id]` | ✅ |
-| Valuación vendedor | ✅ `/sell` | ✅ `(tabs)/sell` | ✅ |
-| Upload documentos (INE + factura) | ✅ `/sell/documents` | ✅ `sell/documents` | ✅ |
-| Oferta formal | ✅ `BuyerActions` | ✅ `BuyerActions` | ✅ |
-| Agendar test drive | ✅ post-oferta accepted | ✅ post-oferta accepted | ✅ |
-| Panel admin transacciones | ✅ `/admin` | ✅ `admin/index` | ✅ |
-| Auth email+password | ✅ login + register | ✅ `(auth)/login` (dual) | ✅ |
+| Feature | Web | Mobile | Paridad | Notas v2 |
+|---------|-----|--------|---------|----------|
+| Listado + filtros | ✅ | ✅ | ✅ | — |
+| Ficha + inspección | ✅ | ✅ | ✅ | — |
+| Valuación vendedor | ✅ | ✅ | ✅ | — |
+| Upload documentos | ✅ | ✅ | ✅ | Requiere storage policies |
+| Oferta formal | ✅ | ✅ | ✅ | Solo vehículos publicados (RLS) |
+| Moderación ofertas | ✅ admin | ❌ | ⚠️ | Demo web-first para admin |
+| Inspección + publicación | ✅ admin | ❌ | ⚠️ | Admin web |
+| Agendar test drive | ✅ | ✅ | ✅ | Tras oferta aceptada por admin |
+| Transacciones simuladas | ✅ admin | ❌ | ⚠️ | Admin avanza estados |
+| Auth | ✅ | ✅ | ✅ | — |
 
 ---
 
-## Paridad visual (design-tokens v1)
+## Seguridad — fixes aplicados
 
-| Componente | Web | Mobile | Paridad |
-|------------|-----|--------|---------|
-| **VehicleCard** — año/marca/modelo | ✅ | ✅ | ✅ |
-| **VehicleCard** — km · trim | ✅ (trim opcional) | ✅ (trim opcional) | ✅ |
-| **VehicleCard** — precio | `listing \|\| estimated` | `resolveVehiclePrice` shared | ✅ |
-| **VehicleCard** — score | ✅ catálogo con join | ✅ catálogo con join | ✅ |
-| **InspectionScore** — formato X/100 | ✅ | ✅ | ✅ |
-| **InspectionScore** — umbrales 75/60 | ✅ `INSPECTION_MIN_PUBLISH_SCORE` | ✅ mismo constante | ✅ |
-| **InspectionScore** — null → "Sin inspección" | ✅ | ✅ (fix v1) | ✅ |
-| **StatusBadge** — labels desde shared | ✅ | ✅ | ✅ |
-| **StatusBadge** — colores | Tailwind pills | RN tokens (equivalente) | ⚠️ Plataforma |
+| ID | Issue | Fix |
+|----|-------|-----|
+| V-CRIT-01 | Escalación admin en signup | `handle_new_user` whitelist buyer/seller |
+| V-CRIT-02 | Escalación admin en profiles UPDATE | Trigger `prevent_profile_role_change` |
+| V-CRIT-03 | Storage sin policies | Migración storage path-based |
+| V-CRIT-04 | Passwords demo1234 en docs | Removidos; seed con password fuerte |
+| V-HIGH-01 | RLS permisivo offers/vehicles/inspections | Triggers + policies admin-only |
 
 ---
 
-## Auth
+## Smoke test demo (15 min)
 
-| Aspecto | Web | Mobile | Paridad |
-|---------|-----|--------|---------|
-| Método | email + password | email + password | ✅ |
-| Rol en signup metadata | buyer \| seller | buyer \| seller | ✅ |
-| Redirect buyer | `/` | `/(tabs)` | ✅ |
-| Redirect seller | `/sell` | `/(tabs)/sell` | ✅ |
-| Redirect admin | `/admin` | `/admin` | ✅ |
-| Rutas protegidas | middleware `/sell/*`, `/admin` | AuthGate + public browse | ✅ |
-| Registro UI | `/register` separado | toggle en login | ⚠️ UX distinta, flujo equivalente |
+Ejecutar en orden con tres roles (cuentas de `npm run seed:demo`):
+
+### 1. Comprador (buyer@texo.mx)
+
+1. Abrir `/` — ver Mazda CX-5 publicado (seed)
+2. Abrir ficha `/vehicles/[id]` — reporte inspección score ≥ 75
+3. Login → enviar oferta formal
+4. Esperar moderación admin (paso 2)
+
+### 2. Admin (admin@texo.mx)
+
+1. Login → `/admin`
+2. **Ofertas pendientes** → Aceptar oferta del comprador
+3. (Opcional) **Inspección** — si hay vehículo en `pending_inspection`: inspeccionar y publicar
+4. Tras prueba de manejo (comprador): **Transacciones** → Iniciar transacción → Avanzar estados hasta `closed`
+
+### 3. Vendedor (seller@texo.mx)
+
+1. `/sell` — crear vehículo nuevo
+2. `/sell/documents` — subir INE + factura
+3. Ver vehículo en cola admin (pending_inspection)
+
+### 4. Comprador (continuación)
+
+1. Tras oferta aceptada → agendar prueba de manejo en ficha
+2. Confirmar flujo completo
+
+**Criterio éxito:** catálogo visible sin login; oferta → aceptación admin → prueba → transacción simulada sin tocar Supabase Dashboard.
 
 ---
 
-## Discrepancias encontradas y resolución
+## Deploy checklist
 
-| # | Discrepancia | Severidad | Resolución v1 |
-|---|--------------|-----------|---------------|
-| 1 | Mobile sin filtros en inventario | Alta | ✅ Filtros + `filterCatalogVehicles` shared |
-| 2 | Mobile sin score en listado | Alta | ✅ `listPublishedVehiclesForCatalog` shared |
-| 3 | Mobile sin test drive | Alta | ✅ `BuyerActions` mobile + `scheduleTestDrive` |
-| 4 | Mobile sin favoritos | Media | ✅ `useFavorites` + SecureStore |
-| 5 | Formatters duplicados | Media | ✅ `packages/shared/src/utils/format.ts` |
-| 6 | Web `VehicleCardData` local | Media | ✅ Reemplazado por `VehicleCatalogItem` |
-| 7 | Mobile `InspectionScore` no aceptaba null | Baja | ✅ Alineado a web |
-| 8 | Mobile precio solo `listing_price` | Baja | ✅ `resolveVehiclePrice` |
-| 9 | Mobile typecheck `router.replace` | Baja | ✅ Tipo de retorno literal en `getHomeRouteForRole` |
-| 10 | AGENT_SYNC decía Mobile idle | Doc | ✅ Actualizado |
+- [ ] Aplicar migraciones en Supabase remoto (`supabase db push` o SQL Editor)
+- [ ] `npm run seed:demo` con `SUPABASE_SERVICE_ROLE_KEY`
+- [ ] Habilitar confirmación email (recomendado demo público) — ver `docs/auth-deploy.md`
+- [ ] Vercel: root `apps/web`, env `NEXT_PUBLIC_SUPABASE_*`
+- [ ] Supabase Auth: Site URL = dominio Vercel
+- [ ] Rotar/eliminar cuentas `@texo.demo` si existían con password débil
+- [ ] `npm run build --workspace=@texo/web` pasa en CI/local
 
 ---
 
-## Issues abiertos (no bloquean v1)
+## Issues abiertos (no bloquean demo web)
 
-| ID | Issue | Plataforma | Propuesta |
-|----|-------|------------|-----------|
-| INT-01 | Test drive mobile usa `TextField` texto vs `datetime-local` web | Mobile | DateTimePicker nativo post-demo |
-| INT-02 | Signup mobile no auto-login tras registro (alert + toggle) | Mobile | Alinear a web si producto lo pide |
-| INT-03 | Favoritos no sincronizan cross-device (local only) | Ambos | Esperado en demo — documentado |
-| INT-04 | `asTexoClient()` cast en web por genéricos `@supabase/ssr` | Web | Regenerar types o wrapper upstream |
-| INT-05 | Valuación: web campo precio manual vs mobile rango algorítmico | Ambos | OK per demo-scope ("rango + ajuste admin") |
-| INT-06 | Propuesta contrato: añadir `listPublishedVehiclesForCatalog` a api-surface v2 | Docs | Orquestador |
+| ID | Issue |
+|----|-------|
+| INT-01 | Test drive mobile: TextField vs datetime picker |
+| INT-02 | Admin solo en web (aceptable demo pitch) |
+| INT-03 | Favoritos local-only |
+| INT-04 | Storage migration requiere owner en `storage.objects` — aplicar vía CLI/dashboard |
 
 ---
 
 ## Verificación técnica
 
 ```bash
-npm run typecheck --workspace=@texo/shared   # ✅
-npm run typecheck --workspace=@texo/web      # ✅
-npm run typecheck --workspace=@texo/mobile    # ✅
-npm run build --workspace=@texo/web           # ✅ (previo a integración)
+npm run typecheck
+npm run build --workspace=@texo/web
 ```
 
-## Cuentas demo (remoto Supabase Texo)
+## Cuentas demo
 
-| Rol | Email | Password |
-|-----|-------|----------|
-| Vendedor | seller@texo.demo | demo1234 |
-| Comprador | buyer@texo.demo | demo1234 |
-| Admin | admin@texo.demo | demo1234 |
+**No almacenar contraseñas en el repositorio.** Crear con:
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=... NEXT_PUBLIC_SUPABASE_URL=... npm run seed:demo
+```
+
+Emails: `admin@texo.mx`, `seller@texo.mx`, `buyer@texo.mx`
 
 ---
 
-## Criterio Integración v1
+## QA Web Polish (2025-07-08)
 
-**Complete** — Web y Mobile recorren el flujo demo-scope con datos reales, types/queries compartidos, y paridad funcional verificada. Issues abiertos son polish UX, no blockers de demo.
+Checklist local (`localhost:3000`) tras sprint diseño + catálogo demo:
+
+| # | Prueba | Resultado |
+|---|--------|-----------|
+| 1 | Home sin login — 7 vehículos + fotos | ✅ Pass |
+| 1b | Filtros Certificados / Sedán / SUV / precio | ✅ Pass (lógica en `HomeCatalog`) |
+| 2 | Ficha Mercedes — foto hero, score 94 | ✅ Pass |
+| 3 | Login buyer → redirect `/` | ✅ Pass (`AuthForm` + `sanitizeRedirect`) |
+| 4 | Modal oferta — precio prellenado, cerrar visible | ✅ Pass |
+| 5 | Login seller → `/sell` | ✅ Pass |
+| 6 | Sell paso 1 validación inline | ✅ Pass |
+| 7 | Sell paso 2 — Enviar deshabilitado sin docs | ✅ Pass |
+| 8 | Sell paso 3 — checklist SVG (no emoji) | ✅ Pass |
+| 9 | Perfil — Mis ofertas real, iconos SVG | ✅ Pass |
+| 10 | `/profile` protegido en middleware | ✅ Pass |
+| 11 | `/terms` stub accesible | ✅ Pass |
+| 12 | Admin tabs mobile sticky | ✅ Pass |
+| 13 | Playwright visual smoke (14 tests) | ✅ Pass |
+| 14 | `npm run typecheck` monorepo | ✅ Pass |
+
+Capturas en `apps/web/e2e/screenshots/` (mobile 390×844 + desktop).
+
+**Nota seed:** catálogo poblado con 7 vehículos + inspecciones; imágenes en `apps/web/public/vehicles/`. Para re-seed completo: `SUPABASE_SERVICE_ROLE_KEY=... npm run seed:demo`.

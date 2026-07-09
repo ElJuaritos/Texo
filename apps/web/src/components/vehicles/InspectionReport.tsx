@@ -1,13 +1,20 @@
 import type { Inspection, InspectionItem } from "@texo/shared";
 import { INSPECTION_CATEGORIES } from "@texo/shared";
-import { InspectionScore } from "@/components/ui/InspectionScore";
+import { cn } from "@/lib/cn";
 
 interface InspectionReportProps {
   inspection: Inspection;
   items: InspectionItem[];
 }
 
-/** Reporte de inspección con score e ítems por categoría. */
+const SEVERITY_COLORS: Record<string, string> = {
+  low: "text-texo-success",
+  medium: "text-texo-warning",
+  high: "text-texo-error",
+  critical: "text-texo-error",
+};
+
+/** Reporte de inspección con categorías expandibles. */
 export function InspectionReport({ inspection, items }: InspectionReportProps) {
   const grouped = items.reduce<Record<string, InspectionItem[]>>((acc, item) => {
     const key = item.category;
@@ -17,50 +24,53 @@ export function InspectionReport({ inspection, items }: InspectionReportProps) {
   }, {});
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold text-slate-900">
-          Inspección certificada
-        </h2>
-        <InspectionScore score={inspection.score} />
-      </div>
-      <p className="mt-2 text-sm text-slate-500">
+    <section className="rounded-2xl border border-texo-border bg-texo-surface p-6">
+      <p className="text-sm text-texo-text-secondary">
         Inspector: {inspection.inspector_name}
         {inspection.certified_at &&
           ` · ${new Date(inspection.certified_at).toLocaleDateString("es-MX")}`}
       </p>
       {inspection.notes && (
-        <p className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+        <p className="mt-4 rounded-xl bg-texo-surface-elevated p-3 text-sm text-texo-text-secondary">
           {inspection.notes}
         </p>
       )}
 
-      <div className="mt-6 space-y-6">
+      <div className="mt-6 space-y-4">
         {Object.entries(grouped).map(([category, categoryItems]) => (
-          <div key={category}>
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <details
+            key={category}
+            className="group rounded-xl border border-texo-border bg-texo-surface-elevated"
+            open
+          >
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-texo-text-primary">
               {INSPECTION_CATEGORIES[category as keyof typeof INSPECTION_CATEGORIES] ??
                 category}
-            </h3>
-            <ul className="mt-2 divide-y divide-slate-100">
+            </summary>
+            <ul className="divide-y divide-texo-border px-4">
               {categoryItems.map((item) => (
                 <li key={item.id} className="py-3 text-sm">
                   <div className="flex justify-between gap-2">
-                    <span className="font-medium text-slate-800">
+                    <span className="font-medium text-texo-text-primary">
                       {item.component}
                     </span>
-                    <span className="capitalize text-slate-500">
+                    <span
+                      className={cn(
+                        "capitalize",
+                        SEVERITY_COLORS[item.severity] ?? "text-texo-text-muted",
+                      )}
+                    >
                       {item.severity}
                     </span>
                   </div>
-                  <p className="mt-1 text-slate-600">{item.description}</p>
+                  <p className="mt-1 text-texo-text-secondary">{item.description}</p>
                 </li>
               ))}
             </ul>
-          </div>
+          </details>
         ))}
         {items.length === 0 && (
-          <p className="text-sm text-slate-500">Sin observaciones registradas.</p>
+          <p className="text-sm text-texo-text-muted">Sin observaciones registradas.</p>
         )}
       </div>
     </section>

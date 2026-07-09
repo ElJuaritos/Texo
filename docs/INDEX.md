@@ -17,6 +17,8 @@ Mapa de documentación. Lectura bajo demanda.
 | [stack.md](./stack.md) | Versiones y herramientas |
 | [conventions.md](./conventions.md) | Estilo de código |
 | [database.md](./database.md) | Schema propuesto / real |
+| [auth-deploy.md](./auth-deploy.md) | Auth, seed y checklist deploy demo público |
+| [integration-report.md](./integration-report.md) | Paridad web/mobile y smoke test |
 
 ## Instrucción para agentes IA
 

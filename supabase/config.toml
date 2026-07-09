@@ -28,6 +28,7 @@ enable_signup = true
 
 [auth.email]
 enable_signup = true
+# Producción demo público: habilitar confirmaciones en Dashboard remoto
 enable_confirmations = false
 
 [storage]

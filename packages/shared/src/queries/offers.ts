@@ -16,6 +16,10 @@ export async function createOffer(
     throw new Error("Authentication required");
   }
 
+  if (payload.amount <= 0) {
+    throw new Error("Offer amount must be greater than zero");
+  }
+
   const { data, error } = await client
     .from("offers")
     .insert({
@@ -48,4 +52,44 @@ export async function listBuyerOffers(
 
   assertNoError(error);
   return (data ?? []).map(mapOffer);
+}
+
+/** Ofertas pendientes para moderación admin. */
+export async function listPendingOffers(
+  client: TexoSupabaseClient,
+): Promise<Offer[]> {
+  const { data, error } = await client
+    .from("offers")
+    .select("*")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+
+  assertNoError(error);
+  return (data ?? []).map(mapOffer);
+}
+
+/** Admin acepta oferta formal. */
+export async function acceptOffer(
+  client: TexoSupabaseClient,
+  offerId: string,
+): Promise<void> {
+  const { error } = await client
+    .from("offers")
+    .update({ status: "accepted" })
+    .eq("id", offerId);
+
+  assertNoError(error);
+}
+
+/** Admin rechaza oferta formal. */
+export async function rejectOffer(
+  client: TexoSupabaseClient,
+  offerId: string,
+): Promise<void> {
+  const { error } = await client
+    .from("offers")
+    .update({ status: "rejected" })
+    .eq("id", offerId);
+
+  assertNoError(error);
 }

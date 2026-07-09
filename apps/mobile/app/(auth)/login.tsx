@@ -10,18 +10,23 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import type { UserRole } from "@texo/shared";
-import { USER_ROLES } from "@texo/shared";
 import { Button } from "../../components/ui/Button";
 import { TextField } from "../../components/ui/TextField";
+import { TexoLogo } from "../../components/ui/TexoLogo";
 import { useAuth } from "../../hooks/useAuth";
 import { colors, fontSize, fontWeight, radius, spacing } from "../../lib/theme/tokens";
 
 type AuthMode = "login" | "signup";
 
-const ROLES: UserRole[] = ["buyer", "seller"];
+const TRUST_BADGES = [
+  "Inspección verificada",
+  "Escrow seguro",
+  "Sin chat directo",
+];
 
-/** Login y registro email+password — auth-flow v1. */
+/** Onboarding login/registro dark morado — paridad con web AuthForm. */
 export default function LoginScreen() {
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<AuthMode>("login");
@@ -59,32 +64,65 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <StatusBar style="light" />
+      <View style={styles.glow} pointerEvents="none" />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.flex}
       >
-        <ScrollView contentContainerStyle={styles.container}>
-          <Text style={styles.badge}>Texo</Text>
-          <Text style={styles.title}>
-            {mode === "login" ? "Inicia sesión" : "Crea tu cuenta"}
-          </Text>
-          <Text style={styles.subtitle}>
-            Marketplace de autos seminuevos certificados
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+          <TexoLogo size="lg" />
+
+          <Text style={styles.tagline}>
+            Compra y vende tu auto con total confianza
           </Text>
 
+          <View style={styles.badges}>
+            {TRUST_BADGES.map((badge) => (
+              <Text key={badge} style={styles.badgeItem}>
+                <Text style={styles.badgeCheck}>✓ </Text>
+                {badge}
+              </Text>
+            ))}
+          </View>
+
           {mode === "signup" ? (
-            <TextField
-              label="Nombre completo"
-              onChangeText={setFullName}
-              placeholder="Tu nombre"
-              value={fullName}
-            />
+            <>
+              <TextField
+                label="Nombre completo"
+                onChangeText={setFullName}
+                placeholder="Tu nombre"
+                value={fullName}
+              />
+              <View style={styles.roleGroup}>
+                <Text style={styles.roleLabel}>Quiero</Text>
+                <View style={styles.roleRow}>
+                  {(["buyer", "seller"] as const).map((r) => (
+                    <Pressable
+                      key={r}
+                      accessibilityRole="button"
+                      onPress={() => setRole(r)}
+                      style={[styles.roleCard, role === r && styles.roleCardActive]}
+                    >
+                      <Text style={styles.roleTitle}>
+                        {r === "buyer" ? "Comprar" : "Vender"}
+                      </Text>
+                      <Text style={styles.roleDesc}>
+                        {r === "buyer"
+                          ? "Busco un auto certificado"
+                          : "Quiero publicar mi auto"}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            </>
           ) : null}
 
           <TextField
             autoCapitalize="none"
             keyboardType="email-address"
-            label="Email"
+            label="Correo"
             onChangeText={setEmail}
             placeholder="tu@email.com"
             value={email}
@@ -97,44 +135,24 @@ export default function LoginScreen() {
             value={password}
           />
 
-          {mode === "signup" ? (
-            <View style={styles.roleGroup}>
-              <Text style={styles.roleLabel}>Quiero</Text>
-              <View style={styles.roleRow}>
-                {ROLES.map((r) => (
-                  <Pressable
-                    key={r}
-                    accessibilityRole="button"
-                    onPress={() => setRole(r)}
-                    style={[styles.roleChip, role === r && styles.roleChipActive]}
-                  >
-                    <Text
-                      style={[styles.roleText, role === r && styles.roleTextActive]}
-                    >
-                      {USER_ROLES[r]}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          ) : null}
-
           <Button
-            label={mode === "login" ? "Entrar" : "Registrarme"}
+            fullWidth
+            label={mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
             loading={loading}
             onPress={handleSubmit}
           />
 
-          <Pressable
-            accessibilityRole="button"
+          <Button
+            fullWidth
+            label={mode === "login" ? "Crear cuenta" : "Iniciar sesión"}
             onPress={() => setMode(mode === "login" ? "signup" : "login")}
-          >
-            <Text style={styles.switch}>
-              {mode === "login"
-                ? "¿No tienes cuenta? Regístrate"
-                : "¿Ya tienes cuenta? Inicia sesión"}
-            </Text>
-          </Pressable>
+            variant="secondary"
+          />
+
+          <Text style={styles.terms}>
+            Al continuar aceptas los{" "}
+            <Text style={styles.termsLink}>Términos y Condiciones</Text> de Texo
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -145,74 +163,87 @@ const styles = StyleSheet.create({
   safe: {
     backgroundColor: colors.background,
     flex: 1,
+    overflow: "hidden",
+  },
+  glow: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    height: 220,
+    left: "15%",
+    opacity: 0.1,
+    position: "absolute",
+    right: "15%",
+    top: 0,
   },
   flex: {
     flex: 1,
   },
   container: {
     flexGrow: 1,
-    gap: spacing.lg,
+    gap: spacing.xl,
     justifyContent: "center",
-    padding: spacing.xl,
+    paddingHorizontal: spacing.screen,
+    paddingVertical: spacing.xxl,
   },
-  badge: {
-    color: colors.primary,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    letterSpacing: 1,
-    textAlign: "center",
-    textTransform: "uppercase",
-  },
-  title: {
-    color: colors.text,
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
-    textAlign: "center",
-  },
-  subtitle: {
-    color: colors.textMuted,
+  tagline: {
+    color: colors.textSecondary,
     fontSize: fontSize.sm,
-    marginBottom: spacing.md,
+    lineHeight: 22,
     textAlign: "center",
+  },
+  badges: {
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  badgeItem: {
+    color: colors.textSecondary,
+    fontSize: fontSize.xs,
+  },
+  badgeCheck: {
+    color: colors.primary,
   },
   roleGroup: {
     gap: spacing.sm,
   },
   roleLabel: {
-    color: colors.secondary,
+    color: colors.textSecondary,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
   },
   roleRow: {
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  roleChip: {
+  roleCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radius.full,
+    borderRadius: radius.md,
     borderWidth: 1,
     flex: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    padding: spacing.md,
   },
-  roleChipActive: {
-    backgroundColor: colors.primary,
+  roleCardActive: {
+    backgroundColor: "rgba(124,58,237,0.1)",
     borderColor: colors.primary,
   },
-  roleText: {
+  roleTitle: {
+    color: colors.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+  },
+  roleDesc: {
     color: colors.textMuted,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
+    fontSize: fontSize.xs,
+    marginTop: 2,
+  },
+  terms: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    lineHeight: 18,
     textAlign: "center",
   },
-  roleTextActive: {
-    color: colors.surface,
-  },
-  switch: {
+  termsLink: {
     color: colors.primary,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    textAlign: "center",
+    textDecorationLine: "underline",
   },
 });

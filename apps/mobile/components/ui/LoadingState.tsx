@@ -14,6 +14,7 @@ export function LoadingState({ message = "Cargando…" }: { message?: string }) 
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
+    backgroundColor: colors.background,
     flex: 1,
     gap: spacing.md,
     justifyContent: "center",

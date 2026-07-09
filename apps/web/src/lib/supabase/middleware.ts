@@ -64,6 +64,12 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  if (path.startsWith("/profile")) {
+    if (!user) {
+      return redirectToLogin(request);
+    }
+  }
+
   return supabaseResponse;
 }
 

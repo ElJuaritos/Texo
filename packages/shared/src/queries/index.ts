@@ -4,13 +4,30 @@ export {
   listPublishedVehiclesForCatalog,
   getVehicleWithInspection,
   listSellerVehicles,
+  listVehiclesPendingInspection,
 } from "./vehicles";
 
-export { createOffer, listBuyerOffers } from "./offers";
+export {
+  createOffer,
+  listBuyerOffers,
+  listPendingOffers,
+  acceptOffer,
+  rejectOffer,
+} from "./offers";
+
+export {
+  createInspection,
+  publishVehicle,
+  getInspectionByVehicleId,
+} from "./inspections";
 
 export { scheduleTestDrive } from "./test-drives";
 
-export { listAdminTransactions } from "./transactions";
+export {
+  listAdminTransactions,
+  createTransaction,
+  updateTransactionStatus,
+} from "./transactions";
 
 export {
   mapVehicle,

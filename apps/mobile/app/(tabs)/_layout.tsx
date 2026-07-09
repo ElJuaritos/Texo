@@ -1,38 +1,46 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { Pressable } from "react-native";
 import { useAuth } from "../../hooks/useAuth";
 import { colors } from "../../lib/theme/tokens";
 
-/** Tab bar principal — explorar y vender. */
+/** Tab bar dark morado — 4 tabs con Vender oculto para buyers. */
 export default function TabsLayout() {
-  const { signOut } = useAuth();
+  const { profile } = useAuth();
+  const isBuyer = profile?.role === "buyer";
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        headerStyle: { backgroundColor: colors.surface },
-        headerTintColor: colors.secondary,
-        headerRight: () => (
-          <Pressable
-            accessibilityLabel="Cerrar sesión"
-            accessibilityRole="button"
-            onPress={() => signOut()}
-            style={{ marginRight: 16 }}
-          >
-            <Ionicons name="log-out-outline" color={colors.textMuted} size={22} />
-          </Pressable>
-        ),
+        tabBarStyle: {
+          backgroundColor: colors.background,
+          borderTopColor: colors.border,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.textPrimary,
+        headerShadowVisible: false,
+        headerShown: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Explorar",
+          title: "Inicio",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="search-outline" color={color} size={size} />
+            <Ionicons color={color} name="home-outline" size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="search"
+        options={{
+          title: "Buscar",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons color={color} name="search-outline" size={size} />
           ),
         }}
       />
@@ -40,8 +48,18 @@ export default function TabsLayout() {
         name="sell"
         options={{
           title: "Vender",
+          href: isBuyer ? null : undefined,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="car-outline" color={color} size={size} />
+            <Ionicons color={color} name="add-outline" size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Perfil",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons color={color} name="person-outline" size={size} />
           ),
         }}
       />

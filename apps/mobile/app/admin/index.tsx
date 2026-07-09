@@ -1,48 +1,87 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  FlatList,
+  Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { listAdminTransactions, type Transaction } from "@texo/shared";
-import { EmptyState } from "../../components/ui/EmptyState";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  listAdminTransactions,
+  listPendingOffers,
+  listVehiclesPendingInspection,
+  type Offer,
+  type Transaction,
+  type Vehicle,
+} from "@texo/shared";
+import { AdminInspectionSection } from "../../components/admin/AdminInspectionSection";
+import { AdminOffersSection } from "../../components/admin/AdminOffersSection";
+import { AdminTransactionsSection } from "../../components/admin/AdminTransactionsSection";
 import { LoadingState } from "../../components/ui/LoadingState";
-import { StatusBadge } from "../../components/ui/StatusBadge";
 import { useAuth } from "../../hooks/useAuth";
 import { colors, fontSize, fontWeight, radius, spacing } from "../../lib/theme/tokens";
 
-/** Panel de transacciones — paridad con web `/admin`. */
+type AdminTab = "offers" | "inspection" | "transactions";
+
+const TABS: { id: AdminTab; label: string }[] = [
+  { id: "offers", label: "Ofertas" },
+  { id: "inspection", label: "Inspección" },
+  { id: "transactions", label: "Transacciones" },
+];
+
+/** Panel admin con tabs — ofertas, inspección y transacciones. */
 export default function AdminScreen() {
   const { client } = useAuth();
+  const insets = useSafeAreaInsets();
+  const [activeTab, setActiveTab] = useState<AdminTab>("offers");
+  const [pendingOffers, setPendingOffers] = useState<Offer[]>([]);
+  const [pendingVehicles, setPendingVehicles] = useState<Vehicle[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [acceptedOffers, setAcceptedOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadTransactions = useCallback(async () => {
+  const loadData = useCallback(async () => {
     if (!client) return;
     try {
       setError(null);
-      const data = await listAdminTransactions(client);
-      setTransactions(data);
+      const [offers, vehicles, txs] = await Promise.all([
+        listPendingOffers(client),
+        listVehiclesPendingInspection(client),
+        listAdminTransactions(client),
+      ]);
+
+      const { data: accepted, error: acceptedError } = await client
+        .from("offers")
+        .select("*")
+        .eq("status", "accepted")
+        .order("created_at", { ascending: false });
+
+      if (acceptedError) throw acceptedError;
+
+      setPendingOffers(offers);
+      setPendingVehicles(vehicles);
+      setTransactions(txs);
+      setAcceptedOffers((accepted ?? []) as Offer[]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar transacciones");
+      setError(err instanceof Error ? err.message : "Error al cargar panel");
     }
   }, [client]);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      await loadTransactions();
+      await loadData();
       setLoading(false);
     })();
-  }, [loadTransactions]);
+  }, [loadData]);
 
   async function onRefresh() {
     setRefreshing(true);
-    await loadTransactions();
+    await loadData();
     setRefreshing(false);
   }
 
@@ -50,48 +89,55 @@ export default function AdminScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Transacciones</Text>
-        <Text style={styles.subtitle}>
-          Seguimiento documental demo — escrow simulado
-        </Text>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <Text style={styles.title}>Panel admin</Text>
+        <Text style={styles.subtitle}>Moderación, inspección y transacciones</Text>
       </View>
 
-      {error ? (
-        <EmptyState description={error} title="Acceso denegado o error" />
-      ) : (
-        <FlatList
-          contentContainerStyle={styles.list}
-          data={transactions}
-          keyExtractor={(item) => item.id}
-          ListEmptyComponent={
-            <EmptyState
-              description="Las transacciones aparecerán cuando haya ofertas aceptadas."
-              title="Sin transacciones"
-            />
-          }
-          refreshControl={
-            <RefreshControl onRefresh={onRefresh} refreshing={refreshing} />
-          }
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <View style={styles.cardRow}>
-                <Text style={styles.cardLabel}>Transacción</Text>
-                <StatusBadge status={item.status} />
-              </View>
-              <Text style={styles.cardMeta}>Vehículo: {item.vehicle_id.slice(0, 8)}…</Text>
-              <Text style={styles.cardMeta}>
-                Creada: {new Date(item.created_at).toLocaleDateString("es-MX")}
-              </Text>
-              {item.closed_at ? (
-                <Text style={styles.cardMeta}>
-                  Cerrada: {new Date(item.closed_at).toLocaleDateString("es-MX")}
-                </Text>
-              ) : null}
-            </View>
-          )}
-        />
-      )}
+      <ScrollView
+        horizontal
+        contentContainerStyle={styles.tabs}
+        showsHorizontalScrollIndicator={false}
+      >
+        {TABS.map((tab) => (
+          <Pressable
+            key={tab.id}
+            onPress={() => setActiveTab(tab.id)}
+            style={[styles.tab, activeTab === tab.id && styles.tabActive]}
+          >
+            <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>
+              {tab.label}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+            tintColor={colors.primary}
+          />
+        }
+      >
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        {activeTab === "offers" ? (
+          <AdminOffersSection offers={pendingOffers} onUpdated={loadData} />
+        ) : null}
+        {activeTab === "inspection" ? (
+          <AdminInspectionSection onUpdated={loadData} vehicles={pendingVehicles} />
+        ) : null}
+        {activeTab === "transactions" ? (
+          <AdminTransactionsSection
+            acceptedOffers={acceptedOffers}
+            onUpdated={loadData}
+            transactions={transactions}
+          />
+        ) : null}
+      </ScrollView>
     </View>
   );
 }
@@ -103,42 +149,49 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: spacing.xs,
-    padding: spacing.lg,
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.screen,
   },
   title: {
-    color: colors.secondary,
+    color: colors.textPrimary,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
   },
   subtitle: {
-    color: colors.textMuted,
+    color: colors.textSecondary,
     fontSize: fontSize.sm,
   },
-  list: {
-    gap: spacing.md,
-    padding: spacing.lg,
-    paddingBottom: spacing.xl * 2,
+  tabs: {
+    gap: spacing.sm,
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.screen,
   },
-  card: {
-    backgroundColor: colors.surface,
+  tab: {
     borderColor: colors.border,
-    borderRadius: radius.lg,
+    borderRadius: radius.full,
     borderWidth: 1,
-    gap: spacing.xs,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
-  cardRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
+  tabActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
-  cardLabel: {
-    color: colors.text,
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
+  tabText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
   },
-  cardMeta: {
-    color: colors.textMuted,
+  tabTextActive: {
+    color: colors.textPrimary,
+  },
+  content: {
+    gap: spacing.lg,
+    padding: spacing.screen,
+    paddingBottom: spacing.xxl * 2,
+  },
+  error: {
+    color: colors.error,
     fontSize: fontSize.sm,
   },
 });

@@ -6,15 +6,15 @@ export default {
     version: "1.0.0",
     orientation: "portrait",
     scheme: "texo",
-    userInterfaceStyle: "light",
-    newArchEnabled: true,
+    userInterfaceStyle: "dark",
+    newArchEnabled: false,
     ios: {
       supportsTablet: true,
       bundleIdentifier: "mx.texo.app",
     },
     android: {
       adaptiveIcon: {
-        backgroundColor: "#0F766E",
+        backgroundColor: "#7C3AED",
       },
       package: "mx.texo.app",
     },

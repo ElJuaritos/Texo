@@ -12,6 +12,7 @@ import { listSellerVehicles, type Vehicle } from "@texo/shared";
 import { Button } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { LoadingState } from "../../components/ui/LoadingState";
+import { SellStepper } from "../../components/ui/SellStepper";
 import { TextField } from "../../components/ui/TextField";
 import { VehicleCard } from "../../components/vehicles/VehicleCard";
 import { useAuth } from "../../hooks/useAuth";
@@ -34,7 +35,7 @@ const emptyForm: SellForm = {
   mileage: "",
 };
 
-/** Valuación y captura de vehículo — paridad con web `/sell`. */
+/** Paso 1 del flujo vendedor — datos del vehículo. */
 export default function SellScreen() {
   const { client, session } = useAuth();
   const router = useRouter();
@@ -95,20 +96,9 @@ export default function SellScreen() {
 
       if (error) throw error;
 
-      Alert.alert(
-        "Vehículo registrado",
-        "Continúa con la carga de documentos para iniciar inspección.",
-        [
-          { text: "Después", style: "cancel" },
-          {
-            text: "Subir documentos",
-            onPress: () =>
-              router.push({ pathname: "/sell/documents", params: { vehicleId: data.id } }),
-          },
-        ],
-      );
       setForm(emptyForm);
       await loadMyVehicles();
+      router.push({ pathname: "/sell/documents", params: { vehicleId: data.id } });
     } catch (err) {
       Alert.alert("Error", err instanceof Error ? err.message : "No se pudo guardar");
     } finally {
@@ -120,10 +110,8 @@ export default function SellScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container} style={styles.flex}>
-      <Text style={styles.title}>Valuación de tu auto</Text>
-      <Text style={styles.subtitle}>
-        Estima el valor de mercado y registra tu vehículo para inspección Texo.
-      </Text>
+      <Text style={styles.title}>Publicar mi auto</Text>
+      <SellStepper currentStep={1} />
 
       <View style={styles.form}>
         <TextField
@@ -146,17 +134,17 @@ export default function SellScreen() {
           value={form.year}
         />
         <TextField
-          label="Versión (trim)"
-          onChangeText={(v) => updateField("trim", v)}
-          placeholder="Ej. LE CVT"
-          value={form.trim}
-        />
-        <TextField
           keyboardType="numeric"
-          label="Kilometraje (km)"
+          label="Kilómetros"
           onChangeText={(v) => updateField("mileage", v)}
           placeholder="45000"
           value={form.mileage}
+        />
+        <TextField
+          label="Versión (trim)"
+          onChangeText={(v) => updateField("trim", v)}
+          placeholder="Ej. LE CVT (opcional)"
+          value={form.trim}
         />
 
         {estimate ? (
@@ -171,38 +159,40 @@ export default function SellScreen() {
           </View>
         ) : null}
 
-        <Button label="Registrar vehículo" loading={submitting} onPress={handleSubmit} />
         <Button
-          label="Subir documentos"
-          onPress={() => router.push("/sell/documents")}
-          variant="outline"
+          fullWidth
+          label="Siguiente"
+          loading={submitting}
+          onPress={handleSubmit}
         />
       </View>
 
-      <Text style={styles.sectionTitle}>Mis vehículos</Text>
-      {vehicles.length === 0 ? (
-        <EmptyState
-          description="Registra tu primer auto para comenzar el proceso de venta."
-          title="Aún no tienes vehículos"
-        />
+      {vehicles.length > 0 ? (
+        <>
+          <Text style={styles.sectionTitle}>Mis vehículos</Text>
+          <FlatList
+            contentContainerStyle={styles.list}
+            data={vehicles}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <VehicleCard
+                onPress={() =>
+                  router.push({
+                    pathname: "/sell/documents",
+                    params: { vehicleId: item.id },
+                  })
+                }
+                showStatus
+                vehicle={item}
+              />
+            )}
+            scrollEnabled={false}
+          />
+        </>
       ) : (
-        <FlatList
-          data={vehicles}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <VehicleCard
-              onPress={() =>
-                router.push({
-                  pathname: "/sell/documents",
-                  params: { vehicleId: item.id },
-                })
-              }
-              showStatus
-              vehicle={item}
-            />
-          )}
-          scrollEnabled={false}
-          contentContainerStyle={styles.list}
+        <EmptyState
+          description="Completa el formulario para registrar tu primer auto."
+          title="Aún no tienes vehículos"
         />
       )}
     </ScrollView>
@@ -220,14 +210,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl * 2,
   },
   title: {
-    color: colors.secondary,
+    color: colors.textPrimary,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
-  },
-  subtitle: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    lineHeight: 20,
   },
   form: {
     backgroundColor: colors.surface,
@@ -258,7 +243,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   sectionTitle: {
-    color: colors.secondary,
+    color: colors.textPrimary,
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
   },

@@ -2,6 +2,36 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
+:root {
+  --texo-background: #0b0f19;
+  --texo-surface: #151b28;
+  --texo-surface-elevated: #1e2638;
+  --texo-border: #2a3347;
+  --texo-primary: #7c3aed;
+  --texo-primary-hover: #8b5cf6;
+  --texo-primary-muted: #2d1b69;
+  --texo-text-primary: #f8fafc;
+  --texo-text-secondary: #94a3b8;
+  --texo-text-muted: #64748b;
+  --texo-success: #22c55e;
+  --texo-warning: #f59e0b;
+  --texo-error: #ef4444;
+}
+
 body {
-  @apply bg-slate-50 text-slate-800 antialiased;
+  @apply bg-texo-background text-texo-text-primary antialiased;
+}
+
+@layer utilities {
+  .page-enter {
+    @apply animate-fade-in-up;
+  }
+
+  .glow-purple {
+    background: radial-gradient(
+      ellipse 60% 40% at 50% 20%,
+      rgba(124, 58, 237, 0.15),
+      transparent 70%
+    );
+  }
 }

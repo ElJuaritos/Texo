@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   title: {
-    color: colors.secondary,
+    color: colors.textPrimary,
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
   },
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   offerAmount: {
-    color: colors.text,
+    color: colors.textPrimary,
     fontSize: fontSize.sm,
   },
   pending: {

@@ -1,9 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { Vehicle, VehicleCatalogItem } from "@texo/shared";
-import { resolveVehiclePrice } from "@texo/shared";
+import { INSPECTION_MIN_PUBLISH_SCORE, resolveVehiclePrice } from "@texo/shared";
 import { formatMileage, formatPrice } from "../../lib/format";
-import { colors, fontSize, fontWeight, radius, spacing } from "../../lib/theme/tokens";
+import { getVehicleImageUrl } from "../../lib/vehicle-image";
+import {
+  cardShadow,
+  colors,
+  fontSize,
+  fontWeight,
+  radius,
+  spacing,
+} from "../../lib/theme/tokens";
 import { InspectionScore } from "../ui/InspectionScore";
 import { StatusBadge } from "../ui/StatusBadge";
 
@@ -22,7 +31,7 @@ function getInspectionScore(vehicle: Vehicle | VehicleCatalogItem): number | nul
   return null;
 }
 
-/** Tarjeta de vehículo — paridad visual con web según design-tokens v1. */
+/** Tarjeta de vehículo — minimalista con foto real o placeholder elegante. */
 export function VehicleCard({
   vehicle,
   onPress,
@@ -30,12 +39,12 @@ export function VehicleCard({
   isFavorite,
   onToggleFavorite,
 }: VehicleCardProps) {
-  const title = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
-  const price = resolveVehiclePrice(
-    vehicle.listing_price,
-    vehicle.estimated_price,
-  );
+  const title = `${vehicle.make} ${vehicle.model}`;
+  const price = resolveVehiclePrice(vehicle.listing_price, vehicle.estimated_price);
   const inspectionScore = getInspectionScore(vehicle);
+  const isCertified =
+    inspectionScore != null && inspectionScore >= INSPECTION_MIN_PUBLISH_SCORE;
+  const imageUrl = getVehicleImageUrl(vehicle.cover_image_url);
 
   return (
     <Pressable
@@ -44,32 +53,60 @@ export function VehicleCard({
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.photo}>
-        <Ionicons name="car-sport-outline" color={colors.textMuted} size={48} />
+        {imageUrl ? (
+          <Image
+            contentFit="cover"
+            source={{ uri: imageUrl }}
+            style={styles.photoImage}
+            transition={200}
+          />
+        ) : (
+          <View style={styles.photoPlaceholder}>
+            <Ionicons color={colors.textMuted} name="car-sport-outline" size={36} />
+          </View>
+        )}
+        {isCertified ? (
+          <View style={styles.certBadge}>
+            <Text style={styles.certText}>CERTIFICADO</Text>
+          </View>
+        ) : null}
+        {inspectionScore != null ? (
+          <View style={styles.scoreWrap}>
+            <InspectionScore score={inspectionScore} variant="overlay" />
+          </View>
+        ) : null}
         {onToggleFavorite ? (
           <Pressable
             accessibilityLabel={isFavorite ? "Quitar favorito" : "Agregar favorito"}
-            onPress={() => onToggleFavorite(vehicle.id)}
+            hitSlop={8}
+            onPress={(e) => {
+              e.stopPropagation?.();
+              onToggleFavorite(vehicle.id);
+            }}
             style={styles.favoriteBtn}
           >
-            <Text style={isFavorite ? styles.favoriteOn : styles.favoriteOff}>
-              {isFavorite ? "♥" : "♡"}
-            </Text>
+            <Ionicons
+              color={isFavorite ? colors.error : colors.textPrimary}
+              name={isFavorite ? "heart" : "heart-outline"}
+              size={18}
+            />
           </Pressable>
         ) : null}
       </View>
 
       <View style={styles.body}>
-        <Text style={styles.title}>{title}</Text>
+        <Text numberOfLines={1} style={styles.title}>
+          {title}
+        </Text>
         <Text style={styles.meta}>
-          {formatMileage(vehicle.mileage)} km
-          {vehicle.trim ? ` · ${vehicle.trim}` : ""}
+          {vehicle.year} · {formatMileage(vehicle.mileage)} km
         </Text>
         <Text style={styles.price}>{formatPrice(price)}</Text>
-
-        <View style={styles.badges}>
-          <InspectionScore score={inspectionScore} />
-          {showStatus ? <StatusBadge status={vehicle.status} /> : null}
-        </View>
+        {showStatus ? (
+          <View style={styles.badges}>
+            <StatusBadge status={vehicle.status} />
+          </View>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -81,56 +118,84 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.lg,
     borderWidth: 1,
+    flex: 1,
+    marginHorizontal: spacing.xs,
+    marginBottom: spacing.md,
     overflow: "hidden",
+    ...cardShadow,
   },
   pressed: {
-    opacity: 0.92,
+    opacity: 0.94,
+    transform: [{ scale: 0.985 }],
   },
   photo: {
+    aspectRatio: 4 / 3,
+    backgroundColor: colors.surfaceElevated,
+    overflow: "hidden",
+    position: "relative",
+  },
+  photoImage: {
+    height: "100%",
+    width: "100%",
+  },
+  photoPlaceholder: {
     alignItems: "center",
-    aspectRatio: 16 / 9,
-    backgroundColor: colors.slateBg,
+    backgroundColor: colors.surfaceElevated,
+    flex: 1,
     justifyContent: "center",
   },
-  favoriteBtn: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.full,
-    padding: spacing.sm,
+  certBadge: {
+    backgroundColor: "rgba(124,58,237,0.92)",
+    borderRadius: radius.sm,
+    left: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    position: "absolute",
+    top: spacing.sm,
+  },
+  certText: {
+    color: colors.textPrimary,
+    fontSize: 9,
+    fontWeight: fontWeight.semibold,
+    letterSpacing: 0.5,
+  },
+  scoreWrap: {
     position: "absolute",
     right: spacing.sm,
     top: spacing.sm,
   },
-  favoriteOn: {
-    color: colors.error,
-    fontSize: fontSize.lg,
-  },
-  favoriteOff: {
-    color: colors.textMuted,
-    fontSize: fontSize.lg,
+  favoriteBtn: {
+    alignItems: "center",
+    backgroundColor: "rgba(11,15,25,0.75)",
+    borderRadius: radius.full,
+    bottom: spacing.sm,
+    height: 32,
+    justifyContent: "center",
+    position: "absolute",
+    right: spacing.sm,
+    width: 32,
   },
   body: {
-    gap: spacing.xs,
-    padding: spacing.lg,
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
   title: {
-    color: colors.secondary,
-    fontSize: fontSize.lg,
+    color: colors.textPrimary,
+    fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
   },
   meta: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontSize: fontSize.xs,
   },
   price: {
-    color: colors.text,
-    fontSize: fontSize.xxl,
+    color: colors.primary,
+    fontSize: fontSize.base,
     fontWeight: fontWeight.bold,
-    marginTop: spacing.xs,
+    marginTop: 2,
   },
   badges: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
     marginTop: spacing.sm,
   },
 });

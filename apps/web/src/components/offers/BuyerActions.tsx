@@ -7,16 +7,143 @@ import type { Offer } from "@texo/shared";
 import { getTexoBrowserClient } from "@/lib/supabase/texo-client";
 import { formatPriceMxn } from "@/lib/format";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Button } from "@/components/ui/Button";
+import { Input, Textarea } from "@/components/ui/Input";
+import { InfoBanner } from "@/components/ui/InfoBanner";
+import { useToast } from "@/components/ui/Toast";
+
+interface OfferModalProps {
+  open: boolean;
+  onClose: () => void;
+  vehicleId: string;
+  listingPrice: number | null;
+  onSuccess: () => void;
+}
+
+/** Modal/sheet para enviar oferta. */
+function OfferModal({
+  open,
+  onClose,
+  vehicleId,
+  listingPrice,
+  onSuccess,
+}: OfferModalProps) {
+  const { showToast } = useToast();
+  const [amount, setAmount] = useState(listingPrice ?? 400000);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) setAmount(listingPrice ?? 400000);
+  }, [open, listingPrice]);
+
+  if (!open) return null;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const client = getTexoBrowserClient();
+      await createOffer(client, {
+        vehicle_id: vehicleId,
+        amount,
+        message: message || undefined,
+      });
+      showToast("Oferta enviada, Texo la revisará pronto", "success");
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al enviar oferta");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
+      <button
+        type="button"
+        aria-label="Cerrar"
+        className="absolute inset-0 bg-black/60"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-md animate-slide-in rounded-t-2xl border border-texo-border bg-texo-surface p-6 md:rounded-2xl">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-texo-text-primary">Tu oferta</h2>
+            {listingPrice && (
+              <p className="mt-0.5 text-sm text-texo-text-muted">
+                Precio publicado: {formatPriceMxn(listingPrice)}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            aria-label="Cerrar"
+            onClick={onClose}
+            className="rounded-lg p-1 text-texo-text-muted hover:bg-texo-surface-elevated hover:text-texo-text-primary"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-texo-text-secondary">
+              Monto (MXN)
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-texo-text-muted">
+                $
+              </span>
+              <input
+                type="number"
+                required
+                value={amount}
+                onChange={(e) => setAmount(Number(e.target.value))}
+                className="w-full rounded-xl border border-texo-border bg-texo-surface py-3 pl-8 pr-4 text-texo-text-primary outline-none focus:border-texo-primary focus:ring-1 focus:ring-texo-primary"
+              />
+            </div>
+          </div>
+          <Textarea
+            label="Mensaje para Texo (opcional)"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={3}
+          />
+          <InfoBanner>
+            Texo revisará tu oferta. No es vinculante hasta después de la prueba de
+            manejo.
+          </InfoBanner>
+          {error && <p className="text-sm text-texo-error">{error}</p>}
+          <Button type="submit" fullWidth disabled={loading}>
+            {loading ? "Enviando…" : "Enviar oferta"}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 interface BuyerActionsProps {
   vehicleId: string;
   listingPrice: number | null;
+  modalOpen?: boolean;
+  onModalOpenChange?: (open: boolean) => void;
+  hidePrimaryCta?: boolean;
 }
 
 /** Oferta formal y agendamiento de prueba de manejo. */
-export function BuyerActions({ vehicleId, listingPrice }: BuyerActionsProps) {
-  const [amount, setAmount] = useState(listingPrice ?? 400000);
-  const [message, setMessage] = useState("");
+export function BuyerActions({
+  vehicleId,
+  listingPrice,
+  modalOpen: externalModalOpen,
+  onModalOpenChange,
+  hidePrimaryCta = false,
+}: BuyerActionsProps) {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [scheduledAt, setScheduledAt] = useState("");
   const [location, setLocation] = useState("Polanco, CDMX");
@@ -24,6 +151,10 @@ export function BuyerActions({ vehicleId, listingPrice }: BuyerActionsProps) {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+  const [internalModalOpen, setInternalModalOpen] = useState(false);
+  const modalOpen = externalModalOpen ?? internalModalOpen;
+  const setModalOpen = onModalOpenChange ?? setInternalModalOpen;
+  const { showToast } = useToast();
 
   async function loadOffers() {
     const client = getTexoBrowserClient();
@@ -43,27 +174,6 @@ export function BuyerActions({ vehicleId, listingPrice }: BuyerActionsProps) {
     loadOffers();
   }, [vehicleId]);
 
-  async function handleOffer(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      const client = getTexoBrowserClient();
-      await createOffer(client, {
-        vehicle_id: vehicleId,
-        amount,
-        message: message || undefined,
-      });
-      setSuccess("Oferta enviada. El vendedor o admin la revisará.");
-      await loadOffers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al enviar oferta");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleSchedule(e: React.FormEvent) {
     e.preventDefault();
     const acceptedOffer = offers.find((o) => o.status === "accepted");
@@ -78,6 +188,7 @@ export function BuyerActions({ vehicleId, listingPrice }: BuyerActionsProps) {
         scheduled_at: new Date(scheduledAt).toISOString(),
         location,
       });
+      showToast("Prueba de manejo agendada correctamente", "success");
       setSuccess("Prueba de manejo agendada correctamente.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al agendar");
@@ -91,105 +202,76 @@ export function BuyerActions({ vehicleId, listingPrice }: BuyerActionsProps) {
 
   if (loggedIn === false) {
     return (
-      <p className="text-sm text-slate-500">
-        <Link href="/login" className="font-medium text-teal-700">
-          Inicia sesión
-        </Link>{" "}
-        para enviar una oferta formal.
-      </p>
+      <Link href="/login">
+        <Button fullWidth>Iniciar sesión para ofertar</Button>
+      </Link>
     );
   }
 
   if (loggedIn === null) {
-    return <p className="text-sm text-slate-400">Cargando…</p>;
+    return <p className="text-sm text-texo-text-muted">Cargando…</p>;
   }
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6">
-      <h2 className="text-lg font-semibold text-slate-900">Oferta formal</h2>
-
+    <>
       {offers.length > 0 && (
-        <ul className="mt-3 space-y-2">
+        <ul className="mb-4 space-y-2">
           {offers.map((o) => (
-            <li key={o.id} className="flex items-center justify-between text-sm">
-              <span>{formatPriceMxn(o.amount)}</span>
+            <li
+              key={o.id}
+              className="flex items-center justify-between rounded-xl border border-texo-border bg-texo-surface px-4 py-3 text-sm"
+            >
+              <span className="font-medium">{formatPriceMxn(o.amount)}</span>
               <StatusBadge status={o.status} />
             </li>
           ))}
         </ul>
       )}
 
-      {!acceptedOffer && !hasPendingOffer && (
-        <form onSubmit={handleOffer} className="mt-4 space-y-3">
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Tu oferta (MXN)</span>
-            <input
-              type="number"
-              required
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Mensaje (opcional)</span>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={2}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-600 disabled:opacity-50"
-          >
-            Enviar oferta
-          </button>
-        </form>
+      {!acceptedOffer && !hasPendingOffer && !hidePrimaryCta && (
+        <Button fullWidth onClick={() => setModalOpen(true)}>
+          Me interesa
+        </Button>
       )}
 
       {hasPendingOffer && !acceptedOffer && (
-        <p className="mt-4 text-sm text-amber-700">
-          Tienes una oferta pendiente. Un admin debe aceptarla para agendar la prueba de manejo.
-        </p>
+        <InfoBanner variant="warning">
+          Tienes una oferta pendiente. Texo la revisará pronto.
+        </InfoBanner>
       )}
 
       {acceptedOffer && (
-        <form onSubmit={handleSchedule} className="mt-4 space-y-3 border-t border-slate-100 pt-4">
-          <p className="text-sm text-green-700">Oferta aceptada — agenda tu prueba de manejo.</p>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Fecha y hora</span>
-            <input
-              type="datetime-local"
-              required
-              value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Ubicación</span>
-            <input
-              required
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-600"
-          >
+        <form onSubmit={handleSchedule} className="space-y-3">
+          <p className="text-sm text-texo-success">Oferta aceptada — agenda tu prueba.</p>
+          <Input
+            label="Fecha y hora"
+            type="datetime-local"
+            required
+            value={scheduledAt}
+            onChange={(e) => setScheduledAt(e.target.value)}
+          />
+          <Input
+            label="Ubicación"
+            required
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+          />
+          <Button type="submit" fullWidth disabled={loading}>
             Agendar prueba de manejo
-          </button>
+          </Button>
         </form>
       )}
 
-      {success && <p className="mt-2 text-sm text-green-600">{success}</p>}
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-    </section>
+      {success && <p className="mt-2 text-sm text-texo-success">{success}</p>}
+      {error && <p className="mt-2 text-sm text-texo-error">{error}</p>}
+
+      <OfferModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        vehicleId={vehicleId}
+        listingPrice={listingPrice}
+        onSuccess={loadOffers}
+      />
+    </>
   );
 }
