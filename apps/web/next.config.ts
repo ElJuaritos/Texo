@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "*.supabase.co" },
+      { protocol: "https", hostname: "images.unsplash.com" },
+    ],
+  },
   ...(isStaticExport
     ? {
         output: "export" as const,

@@ -29,6 +29,9 @@ jobs:
 
       - run: npm run typecheck
 
+      - name: Download vehicle photos
+        run: node scripts/seed-vehicle-images.mjs
+
       - name: Disable middleware for static export
         run: node scripts/prepare-static-export.mjs
 
